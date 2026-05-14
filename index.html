@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar Fusion Playground</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 50% 15%, rgba(255, 172, 65, 0.25), transparent 35%), #060b18;
+      color: white;
+      overflow-x: hidden;
+    }
+    .page { max-width: 1250px; margin: 0 auto; padding: 28px; }
+    header { display: flex; justify-content: space-between; gap: 20px; align-items: end; margin-bottom: 20px; }
+    h1 { font-size: clamp(2.1rem, 5vw, 4.2rem); margin: 0; letter-spacing: -0.05em; }
+    .tag { color: #ffd166; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .subtitle { color: #cbd5e1; max-width: 720px; font-size: 1.05rem; line-height: 1.5; }
+    .layout { display: grid; grid-template-columns: 1fr 360px; gap: 20px; }
+    .panel, .sim-card {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.38);
+      border-radius: 28px;
+      overflow: hidden;
+      backdrop-filter: blur(14px);
+    }
+    .panel { padding: 20px; margin-bottom: 18px; }
+    .panel h2 { margin: 0 0 14px; font-size: 1.25rem; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      border: 0;
+      border-radius: 18px;
+      padding: 12px 17px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #0f172a;
+      background: #fbbf24;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    button:hover { transform: translateY(-1px); background: #fde68a; }
+    button.secondary { background: #1e293b; color: white; }
+    button.secondary:hover { background: #334155; }
+    .slider-row { margin: 17px 0; }
+    .slider-label { display: flex; justify-content: space-between; font-size: 0.93rem; color: #cbd5e1; margin-bottom: 8px; }
+    .slider-label b { color: #fde68a; }
+    input[type="range"] { width: 100%; accent-color: #fbbf24; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat, .step, .log-item {
+      background: rgba(30, 41, 59, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 18px;
+      padding: 13px;
+    }
+    .stat small { color: #94a3b8; display: block; }
+    .stat strong { font-size: 1.55rem; color: #a7f3d0; }
+    .step { margin: 9px 0; font-size: 0.94rem; line-height: 1.35; }
+    .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; font-size: 0.86rem; }
+    .count { border-radius: 14px; padding: 9px; background: rgba(255,255,255,0.06); }
+    .log { min-height: 156px; display: flex; flex-direction: column; gap: 8px; }
+    .log-item { color: #e2e8f0; font-size: 0.88rem; padding: 10px 12px; animation: fadeIn 0.25s ease; }
+    .helium { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.25); color: #fef3c7; border-radius: 18px; padding: 13px; margin-top: 12px; }
+    svg { display: block; width: 100%; height: 650px; background: #050816; }
+    .note { color: #94a3b8; font-size: 0.82rem; line-height: 1.4; margin-top: 12px; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+    @media (max-width: 980px) {
+      header { align-items: start; flex-direction: column; }
+      .layout { grid-template-columns: 1fr; }
+      svg { height: 560px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <div class="tag">✦ Interactive stellar core model</div>
+        <h1>Solar Fusion Playground</h1>
+        <p class="subtitle">Watch hydrogen nuclei collide through the proton-proton chain. Raise the core temperature and density to make fusion events more likely.</p>
+      </div>
+      <div class="controls">
+        <button id="playPause">Pause</button>
+        <button class="secondary" id="reset">Reset</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="sim-card">
+        <svg id="sim" viewBox="0 0 900 560" aria-label="Solar fusion simulation"></svg>
+      </section>
+
+      <aside>
+        <div class="panel">
+          <h2>⚙️ Core Controls</h2>
+          <div class="slider-row">
+            <div class="slider-label"><span>Temperature</span><b><span id="tempValue">15.0</span> million K</b></div>
+            <input id="temperature" type="range" min="8" max="28" step="0.1" value="15" />
+          </div>
+          <div class="slider-row">
+            <div class="slider-label"><span>Particle density</span><b><span id="densityValue">70</span> nuclei</b></div>
+            <input id="density" type="range" min="35" max="115" step="1" value="70" />
+          </div>
+          <div class="stats">
+            <div class="stat"><small>Fusion chance</small><strong id="chance">0.40%</strong></div>
+            <div class="stat"><small>Energy released</small><strong id="energy">0</strong></div>
+          </div>
+          <p class="note">This is a simplified visual model, not a precise solar physics calculation.</p>
+        </div>
+
+        <div class="panel">
+          <h2>⚛️ Fusion Chain</h2>
+          <div class="step"><b style="color:#fca5a5">1.</b> Proton + proton → deuterium + energy</div>
+          <div class="step"><b style="color:#67e8f9">2.</b> Deuterium + proton → helium-3 + energy</div>
+          <div class="step"><b style="color:#bef264">3.</b> Helium-3 + helium-3 → helium-4 + two protons</div>
+          <div class="counts">
+            <div class="count">Protons: <b id="protonCount">0</b></div>
+            <div class="count">Deuterium: <b id="deuteriumCount">0</b></div>
+            <div class="count">Helium-3: <b id="helium3Count">0</b></div>
+            <div class="count">Helium-4: <b id="helium4Count">0</b></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>🔥 Live Core Log</h2>
+          <div class="log" id="log"></div>
+          <div class="helium">Helium-4 atoms completed: <b id="heliumMade">0</b></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const WIDTH = 900, HEIGHT = 560, CORE_X = WIDTH / 2, CORE_Y = HEIGHT / 2, CORE_R = 195;
+    const svg = document.getElementById('sim');
+    const tempSlider = document.getElementById('temperature');
+    const densitySlider = document.getElementById('density');
+    const playPause = document.getElementById('playPause');
+    const resetBtn = document.getElementById('reset');
+    let running = true, temperature = 15, density = 70, energy = 0, heliumMade = 0;
+    let particles = [], bursts = [], lastTime = performance.now();
+    let events = ['Welcome to the solar core. Turn up temperature and density to boost fusion.'];
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+    function uuid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+    function makeParticle(type = 'proton') {
+      const angle = rand(0, Math.PI * 2);
+      const radius = Math.sqrt(Math.random()) * (CORE_R - 20);
+      const speed = rand(0.5, 1.6);
+      return { id: uuid(), type, x: CORE_X + Math.cos(angle) * radius, y: CORE_Y + Math.sin(angle) * radius, vx: Math.cos(rand(0, Math.PI * 2)) * speed, vy: Math.sin(rand(0, Math.PI * 2)) * speed, pulse: 0 };
+    }
+    function styleFor(type) {
+      if (type === 'proton') return { r: 5, fill: '#ff5b5b', label: 'p+' };
+      if (type === 'deuterium') return { r: 8, fill: '#63e6ff', label: 'D' };
+      if (type === 'helium3') return { r: 11, fill: '#ffd166', label: 'He-3' };
+      return { r: 16, fill: '#b6ff7a', label: 'He-4' };
+    }
+    function fusionChance() {
+      const tempFactor = Math.pow(temperature / 15, 4);
+      const densityFactor = density / 70;
+      return clamp(0.004 * tempFactor * densityFactor, 0.001, 0.08);
+    }
+    function addEvent(text) { events = [text, ...events].slice(0, 5); }
+    function reset() {
+      particles = Array.from({ length: Math.round(density) }, () => makeParticle('proton'));
+      bursts = []; energy = 0; heliumMade = 0;
+      events = ['Simulation reset. The core is full of fast-moving protons.'];
+      render();
+    }
+    function syncDensity() {
+      const target = Math.round(density);
+      while (particles.length < target) particles.push(makeParticle('proton'));
+      if (particles.length > target) particles = particles.slice(0, target);
+    }
+    function updatePhysics(dt) {
+      const thermalSpeed = 0.45 + temperature / 14;
+      particles.forEach(p => {
+        p.x += p.vx * thermalSpeed * dt;
+        p.y += p.vy * thermalSpeed * dt;
+        const dx = p.x - CORE_X, dy = p.y - CORE_Y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > CORE_R - 8) {
+          const nx = dx / dist, ny = dy / dist;
+          const dot = p.vx * nx + p.vy * ny;
+          p.vx -= 2 * dot * nx; p.vy -= 2 * dot * ny;
+          p.x = CORE_X + nx * (CORE_R - 8); p.y = CORE_Y + ny * (CORE_R - 8);
+        }
+        p.vx = clamp(p.vx + rand(-0.045, 0.045) * temperature / 15, -2.9, 2.9);
+        p.vy = clamp(p.vy + rand(-0.045, 0.045) * temperature / 15, -2.9, 2.9);
+        p.pulse = Math.max(0, p.pulse - 0.08 * dt);
+      });
+      const used = new Set(), created = [], chance = fusionChance();
+      for (let i = 0; i < particles.length; i++) {
+        if (used.has(particles[i].id)) continue;
+        for (let j = i + 1; j < particles.length; j++) {
+          if (used.has(particles[j].id)) continue;
+          const a = particles[i], b = particles[j];
+          const d = Math.hypot(a.x - b.x, a.y - b.y);
+          if (d > 18 || Math.random() > chance) continue;
+          const types = [a.type, b.type].sort().join('+');
+          const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
+          if (types === 'proton+proton') {
+            used.add(a.id); used.add(b.id);
+            const p = makeParticle('deuterium'); Object.assign(p, { x, y, pulse: 1, vx: rand(-1.3,1.3), vy: rand(-1.3,1.3) }); created.push(p);
+            energy += 2; addEvent('Two protons fused into deuterium + energy'); bursts.push({ id: uuid(), x, y, size: 44, life: 1, color: '#63e6ff' }); break;
+          }
+          if (types === 'deuterium+proton') {
+            used.add(a.id); used.add(b.id);
+            const p = makeParticle('helium3'); Object.assign(p, { x, y, pulse: 1, vx: rand(-1,1), vy: rand(-1,1) }); created.push(p);
+            energy += 4; addEvent('Deuterium captured a proton to form helium-3'); bursts.push({ id: uuid(), x, y, size: 62, life: 1, color: '#ffd166' }); break;
+          }
+          if (types === 'helium3+helium3') {
+            used.add(a.id); used.add(b.id);
+            const he = makeParticle('helium4'); Object.assign(he, { x, y, pulse: 1, vx: rand(-.8,.8), vy: rand(-.8,.8) });
+            const p1 = makeParticle('proton'), p2 = makeParticle('proton');
+            Object.assign(p1, { x: x + 15, y: y - 8, vx: rand(1.2,2.2), vy: rand(-1.2,1.2) });
+            Object.assign(p2, { x: x - 15, y: y + 8, vx: rand(-2.2,-1.2), vy: rand(-1.2,1.2) });
+            created.push(he, p1, p2); energy += 9; heliumMade++; addEvent('Two helium-3 nuclei formed helium-4 + two protons'); bursts.push({ id: uuid(), x, y, size: 92, life: 1, color: '#b6ff7a' }); break;
+          }
+        }
+      }
+      particles = particles.filter(p => !used.has(p.id)).concat(created).slice(0, Math.max(35, Math.round(density + 20)));
+      bursts = bursts.map(b => ({ ...b, life: b.life - 0.035 * dt, size: b.size + 1.7 * dt })).filter(b => b.life > 0).slice(-18);
+    }
+    function render() {
+      const stars = Array.from({ length: 80 }).map((_, i) => `<circle cx="${(i * 97) % WIDTH}" cy="${(i * 53) % HEIGHT}" r="${(i % 3) + 0.5}" fill="white" opacity="${0.08 + (i % 5) * 0.025}"/>`).join('');
+      const burstMarkup = bursts.map(b => `<g opacity="${b.life}"><circle cx="${b.x}" cy="${b.y}" r="${b.size}" fill="none" stroke="${b.color}" stroke-width="4" opacity="${b.life * 0.7}"/><circle cx="${b.x}" cy="${b.y}" r="${b.size * 0.35}" fill="${b.color}" opacity="${b.life * 0.25}"/></g>`).join('');
+      const particleMarkup = particles.map(p => { const s = styleFor(p.type); return `<g><circle cx="${p.x}" cy="${p.y}" r="${s.r + p.pulse * 18}" fill="none" stroke="${s.fill}" stroke-width="2" opacity="${p.pulse}"/><circle cx="${p.x}" cy="${p.y}" r="${s.r}" fill="${s.fill}" stroke="rgba(255,255,255,.75)" stroke-width="1.5"/><text x="${p.x}" y="${p.y+3}" text-anchor="middle" font-size="${p.type === 'proton' ? 7 : 8}" font-weight="800" fill="#0f172a">${s.label}</text></g>`; }).join('');
+      svg.innerHTML = `
+        <defs><radialGradient id="coreGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fff2a8" stop-opacity=".95"/><stop offset="38%" stop-color="#ff9f1c" stop-opacity=".7"/><stop offset="72%" stop-color="#ff4d00" stop-opacity=".25"/><stop offset="100%" stop-color="#10172a" stop-opacity="0"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="4" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        ${stars}<circle cx="${CORE_X}" cy="${CORE_Y}" r="290" fill="url(#coreGlow)"/><circle cx="${CORE_X}" cy="${CORE_Y}" r="${CORE_R}" fill="rgba(255,130,0,.08)" stroke="rgba(255,210,102,.45)" stroke-width="3" stroke-dasharray="10 10"/><circle cx="${CORE_X}" cy="${CORE_Y}" r="145" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="2"/><circle cx="${CORE_X}" cy="${CORE_Y}" r="95" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="2"/>
+        <g filter="url(#glow)">${burstMarkup}${particleMarkup}</g>
+        <text x="${CORE_X}" y="42" text-anchor="middle" fill="rgba(255,255,255,.78)" font-size="18" font-weight="700">Solar core: high pressure + high temperature</text><text x="${CORE_X}" y="68" text-anchor="middle" fill="rgba(255,255,255,.5)" font-size="13">Fusion happens when nuclei get close enough to overcome electric repulsion</text>`;
+      document.getElementById('tempValue').textContent = temperature.toFixed(1);
+      document.getElementById('densityValue').textContent = Math.round(density);
+      document.getElementById('chance').textContent = (fusionChance() * 100).toFixed(2) + '%';
+      document.getElementById('energy').textContent = energy;
+      document.getElementById('heliumMade').textContent = heliumMade;
+      const counts = particles.reduce((a, p) => (a[p.type] = (a[p.type] || 0) + 1, a), {});
+      document.getElementById('protonCount').textContent = counts.proton || 0;
+      document.getElementById('deuteriumCount').textContent = counts.deuterium || 0;
+      document.getElementById('helium3Count').textContent = counts.helium3 || 0;
+      document.getElementById('helium4Count').textContent = counts.helium4 || 0;
+      document.getElementById('log').innerHTML = events.map(e => `<div class="log-item">⚡ ${e}</div>`).join('');
+    }
+    function loop(now) {
+      const dt = Math.min((now - lastTime) / 16.67, 2); lastTime = now;
+      if (running) updatePhysics(dt);
+      render(); requestAnimationFrame(loop);
+    }
+    tempSlider.addEventListener('input', e => { temperature = Number(e.target.value); });
+    densitySlider.addEventListener('input', e => { density = Number(e.target.value); syncDensity(); });
+    playPause.addEventListener('click', () => { running = !running; playPause.textContent = running ? 'Pause' : 'Play'; });
+    resetBtn.addEventListener('click', reset);
+    reset(); requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
